@@ -1,0 +1,135 @@
+---
+title: "Analysis of organoid single cell RNA-Seq data"
+output: html_document
+---
+
+Analysis of single cell RNA-Seq libraries of brain organoids derived from Pitt-Hopkins Syndrome patients and respective parents of matching sex.
+
+```{r message = FALSE, warning = FALSE}
+library(Seurat)
+library(monocle3)
+library(SeuratWrappers)
+library(tidyverse)
+```
+
+---
+
+Open the output of `cellranger aggregate` and create a Seurat object:
+
+```{r}
+pths.data <- Read10X("filtered_feature_bc_matrix")
+pths <- CreateSeuratObject(
+  counts = pths.data,
+  project = "pths",
+  min.cells = 3,
+  min.features = 200
+)
+rm(pths.data)
+```
+
+Add library metadata and cell annotations. These annotations were assigned using a combination of automatic clustering and manual curation with marker genes.
+
+```{r}
+manual_annotations <- read.delim("subpopulations.csv", sep = ",", row.names = "Barcode")
+library_id <- read.delim("library_id.csv", sep = ",", row.names = "Barcode")
+pths <- AddMetaData(pths, manual_annotations, col.name = "manual_annotations")
+pths <- AddMetaData(pths, library_id, col.name = "library_id")
+```
+
+
+Normalize and scale the feature matrix:
+
+```{r message = FALSE, warning = FALSE}
+pths <- NormalizeData(pths, normalization.method = "LogNormalize", scale.factor = 10000)
+pths <- FindVariableFeatures(pths, selection.method = "vst", nfeatures = 3000)
+pths <- ScaleData(pths)
+```
+
+Create the UMAP embedding and select the subpopulations of interest:
+
+```{r message = FALSE, warning = FALSE}
+pths <- RunPCA(pths, features = VariableFeatures(object = pths))
+pths <- RunUMAP(pths, dims = 1:15)
+Idents(pths) <- "manual_annotations"
+pths <- subset(pths, idents = c("Pr-Glut", "Pr-GABA", "IP-Glut", "N-Glut", "N-GABA", "IP-GABA"))
+```
+
+
+```{r}
+DimPlot(pths,
+  reduction = "umap",
+  cols = c(
+    "#56B4E9", "#E69F00", "#009E73", "#F0E442", "#CC79A7", "#D55E00", "#353535", "#0072B2"
+  )
+)
+```
+
+```{r}
+VlnPlot(pths,
+  features = "SOX2",
+  group.by = "manual_annotations", pt.size = 0, cols = c(
+    "#56B4E9", "#E69F00", "#009E73", "#F0E442", "#CC79A7", "#D55E00", "#353535", "#0072B2"
+  )
+)
+```
+
+Reconstruct the differentiation trajectory for glutamatergic and GABAergic subpopulations:
+
+```{r message = FALSE, warning = FALSE}
+pr_glut_cells <- row.names(manual_annotations)[manual_annotations == "Pr-Glut"]
+pths_glut <- pths[, pths$manual_annotations %in% c("Pr-Glut", "IP-Glut", "N-Glut")]
+DefaultAssay(pths_glut) <- "RNA"
+
+pths_glut.cds <- as.cell_data_set(pths_glut)
+pths_glut.cds <- cluster_cells(
+  cds = pths_glut.cds,
+  reduction_method = "UMAP",
+  k = 20
+)
+pths_glut.cds <- learn_graph(pths_glut.cds, use_partition = FALSE)
+pths_glut.cds <- order_cells(pths_glut.cds,
+  reduction_method = "UMAP",
+  root_cells = pr_glut_cells
+)
+
+rm(pths_glut)
+
+pr_gaba_cells <- row.names(manual_annotations)[manual_annotations == "Pr-GABA"]
+pths_gaba <- pths[, pths$manual_annotations %in% c("Pr-GABA", "IP-GABA", "N-GABA")]
+DefaultAssay(pths_gaba) <- "RNA"
+
+pths_gaba.cds <- as.cell_data_set(pths_gaba)
+pths_gaba.cds <- cluster_cells(
+  cds = pths_gaba.cds,
+  reduction_method = "UMAP",
+  k = 20
+)
+pths_gaba.cds <- learn_graph(pths_gaba.cds, use_partition = FALSE)
+pths_gaba.cds <- order_cells(pths_gaba.cds,
+  reduction_method = "UMAP",
+  root_cells = pr_gaba_cells
+)
+
+rm(pths_gaba)
+```
+
+Add the pseudotime to the Seurat object:
+
+```{r}
+pseudotime <- append(pths_glut.cds@principal_graph_aux@listData$UMAP$pseudotime,
+                     pths_gaba.cds@principal_graph_aux@listData$UMAP$pseudotime)
+rm(pths_glut.cds)
+rm(pths_gaba.cds)
+
+pths <- AddMetaData(
+  object = pths,
+  metadata = pseudotime,
+  col.name = "Pseudotime"
+)
+```
+
+```{r}
+FeaturePlot(pths, "Pseudotime", pt.size = 0.1) +
+  scale_color_viridis_c("E")
+```
+

@@ -1,0 +1,384 @@
+---
+title: "iPSC-derived cultures differential expression analysis"
+output: html_document
+---
+
+Comparison between RNA-Seq libraries of neural progenitor cells and neurons derived from Pitt-Hopkins Syndrome patients and respective parents of matching sex.
+
+```{r message = FALSE, warning = FALSE}
+library(DESeq2)
+library(tximport)
+library(tidyverse)
+library(pheatmap)
+library(viridis)
+library(rmarkdown)
+```
+
+---
+
+## Parent 1 × Patient 1 (neural progenitor cells)
+
+Create design matrix and import quantifications:
+
+```{r message = FALSE}
+samples <- data.frame(
+  condition = c("parent", "parent", "parent", "patient", "patient", "patient"),
+  row.names = c("parent_1-1", "parent_1-2", "parent_1-3", "patient_1-1", "patient_1-2", "patient_1-3")
+)
+tx2gene <- read_tsv("transcript2gene.tsv")
+files <- file.path("Quantifications", rownames(samples), "quant.sf")
+txi <- tximport(files, type = "salmon", tx2gene = tx2gene)
+```
+
+Create DESeq2 object and perform differential expression testing with `apeglm` shrinkage and using `lfcThreshold` to make the alternative hypothesis stricter:
+
+```{r}
+dds <- DESeqDataSetFromTximport(txi, colData = samples, design = ~condition)
+dds <- DESeq(dds)
+res <- lfcShrink(dds, coef = "condition_patient_vs_parent", type = "apeglm", lfcThreshold = 0.5)
+```
+
+### Results table
+
+```{r}
+formated_res <- as.data.frame(res) %>%
+  rownames_to_column("gene") %>%
+  arrange(desc(abs(log2FoldChange))) %>%
+  mutate(significative = if_else(svalue < 0.005, "yes", "no")) %>%
+  mutate(up = if_else(log2FoldChange < 0, "parent", "patient"))
+paged_table(formated_res)
+```
+
+```{r}
+table(formated_res$significative)
+```
+
+
+### Visualizations
+
+```{r}
+plotMA(res)
+```
+
+```{r}
+vsd <- vst(dds, blind = TRUE)
+plotPCA(vsd, intgroup = "condition")
+```
+
+
+```{r}
+select <- order(rowMeans(counts(dds, normalized = TRUE)), decreasing = TRUE)[1:5000]
+df <- as.data.frame(colData(dds))
+pheatmap(assay(vsd)[select, ],
+  cluster_rows = TRUE,
+  show_rownames = FALSE,
+  cluster_cols = TRUE,
+  annotation_col = df,
+  border_color = NA,
+  color = cividis(256),
+  scale = "row"
+)
+```
+
+---
+
+## Parent 2 × Patient 2 (neural progenitor cells)
+
+Create design matrix and import quantifications:
+
+```{r message = FALSE}
+samples <- data.frame(
+  condition = c("parent", "parent", "parent", "patient", "patient", "patient"),
+  row.names = c("parent_2-1", "parent_2-2", "parent_2-3", "patient_2-1", "patient_2-2", "patient_2-3")
+)
+tx2gene <- read_tsv("transcript2gene.tsv")
+files <- file.path("Quantifications", rownames(samples), "quant.sf")
+txi <- tximport(files, type = "salmon", tx2gene = tx2gene)
+```
+
+Create DESeq2 object and perform differential expression testing with `apeglm` shrinkage and using `lfcThreshold` to make the alternative hypothesis stricter:
+
+```{r}
+dds <- DESeqDataSetFromTximport(txi, colData = samples, design = ~condition)
+dds <- DESeq(dds)
+res <- lfcShrink(dds, coef = "condition_patient_vs_parent", type = "apeglm", lfcThreshold = 0.5)
+```
+
+### Results table
+
+```{r}
+formated_res <- as.data.frame(res) %>%
+  rownames_to_column("gene") %>%
+  arrange(desc(abs(log2FoldChange))) %>%
+  mutate(significative = if_else(svalue < 0.005, "yes", "no")) %>%
+  mutate(up = if_else(log2FoldChange < 0, "parent", "patient"))
+paged_table(formated_res)
+```
+
+```{r}
+table(formated_res$significative)
+```
+
+### Visualizations
+
+```{r}
+plotMA(res)
+```
+
+```{r}
+vsd <- vst(dds, blind = TRUE)
+plotPCA(vsd, intgroup = "condition")
+```
+
+
+```{r}
+select <- order(rowMeans(counts(dds, normalized = TRUE)), decreasing = TRUE)[1:5000]
+df <- as.data.frame(colData(dds))
+pheatmap(assay(vsd)[select, ],
+  cluster_rows = TRUE,
+  show_rownames = FALSE,
+  cluster_cols = TRUE,
+  annotation_col = df,
+  border_color = NA,
+  color = cividis(256),
+  scale = "row"
+)
+```
+
+---
+
+## Parent 3 × Patient 3 (neural progenitor cells)
+
+Create design matrix and import quantifications:
+
+```{r message = FALSE}
+samples <- data.frame(
+  condition = c("parent", "parent", "parent", "patient", "patient"),
+  row.names = c("parent_3-1", "parent_3-2", "parent_3-3", "patient_3-1", "patient_3-2")
+)
+tx2gene <- read_tsv("transcript2gene.tsv")
+files <- file.path("Quantifications", rownames(samples), "quant.sf")
+txi <- tximport(files, type = "salmon", tx2gene = tx2gene)
+```
+
+The `patient_3-3` sample is not being used for this analysis as it was determined to be an outlier based on previous analysis, [as shown below](#outlier).
+
+Create DESeq2 object and perform differential expression testing with `apeglm` shrinkage and using `lfcThreshold` to make the alternative hypothesis stricter:
+
+```{r}
+dds <- DESeqDataSetFromTximport(txi, colData = samples, design = ~condition)
+dds <- DESeq(dds)
+res <- lfcShrink(dds, coef = "condition_patient_vs_parent", type = "apeglm", lfcThreshold = 0.5)
+```
+
+### Results table
+
+```{r}
+formated_res <- as.data.frame(res) %>%
+  rownames_to_column("gene") %>%
+  arrange(desc(abs(log2FoldChange))) %>%
+  mutate(significative = if_else(svalue < 0.005, "yes", "no")) %>%
+  mutate(up = if_else(log2FoldChange < 0, "parent", "patient"))
+paged_table(formated_res)
+```
+
+```{r}
+table(formated_res$significative)
+```
+
+### Visualizations
+
+```{r}
+plotMA(res)
+```
+
+```{r}
+vsd <- vst(dds, blind = TRUE)
+plotPCA(vsd, intgroup = "condition")
+```
+
+
+```{r}
+select <- order(rowMeans(counts(dds, normalized = TRUE)), decreasing = TRUE)[1:5000]
+df <- as.data.frame(colData(dds))
+pheatmap(assay(vsd)[select, ],
+  cluster_rows = TRUE,
+  show_rownames = FALSE,
+  cluster_cols = TRUE,
+  annotation_col = df,
+  border_color = NA,
+  color = cividis(256),
+  scale = "row"
+)
+```
+
+---
+
+## Parent 4 × Patient 4 (neural progenitor cells)
+
+Create design matrix and import quantifications:
+
+```{r message = FALSE}
+samples <- data.frame(
+  condition = c("parent", "parent", "parent", "patient", "patient", "patient"),
+  row.names = c("parent_4-1", "parent_4-2", "parent_4-3", "patient_4-1", "patient_4-2", "patient_4-3")
+)
+tx2gene <- read_tsv("transcript2gene.tsv")
+files <- file.path("Quantifications", rownames(samples), "quant.sf")
+txi <- tximport(files, type = "salmon", tx2gene = tx2gene)
+```
+
+Create DESeq2 object and perform differential expression testing with `apeglm` shrinkage and using `lfcThreshold` to make the alternative hypothesis stricter:
+
+```{r}
+dds <- DESeqDataSetFromTximport(txi, colData = samples, design = ~condition)
+dds <- DESeq(dds)
+res <- lfcShrink(dds, coef = "condition_patient_vs_parent", type = "apeglm", lfcThreshold = 0.5)
+```
+
+### Results table
+
+```{r}
+formated_res <- as.data.frame(res) %>%
+  rownames_to_column("gene") %>%
+  arrange(desc(abs(log2FoldChange))) %>%
+  mutate(significative = if_else(svalue < 0.005, "yes", "no")) %>%
+  mutate(up = if_else(log2FoldChange < 0, "parent", "patient"))
+paged_table(formated_res)
+```
+
+```{r}
+table(formated_res$significative)
+```
+
+### Visualizations
+
+```{r}
+plotMA(res)
+```
+
+```{r}
+vsd <- vst(dds, blind = TRUE)
+plotPCA(vsd, intgroup = "condition")
+```
+
+
+```{r}
+select <- order(rowMeans(counts(dds, normalized = TRUE)), decreasing = TRUE)[1:5000]
+df <- as.data.frame(colData(dds))
+pheatmap(assay(vsd)[select, ],
+  cluster_rows = TRUE,
+  show_rownames = FALSE,
+  cluster_cols = TRUE,
+  annotation_col = df,
+  border_color = NA,
+  color = cividis(256),
+  scale = "row"
+)
+```
+
+---
+
+## Parent 4 × Patient 4 (neurons)
+
+Create design matrix and import quantifications:
+
+```{r message = FALSE}
+samples <- data.frame(
+  condition = c("parent", "parent", "parent", "patient", "patient", "patient"),
+  row.names = c("parent_4_n-1", "parent_4_n-2", "parent_4_n-3", "patient_4_n-1", "patient_4_n-2", "patient_4_n-3")
+)
+tx2gene <- read_tsv("transcript2gene.tsv")
+files <- file.path("Quantifications", rownames(samples), "quant.sf")
+txi <- tximport(files, type = "salmon", tx2gene = tx2gene)
+```
+
+Create DESeq2 object and perform differential expression testing with `apeglm` shrinkage and using `lfcThreshold` to make the alternative hypothesis stricter:
+
+```{r}
+dds <- DESeqDataSetFromTximport(txi, colData = samples, design = ~condition)
+dds <- DESeq(dds)
+res <- lfcShrink(dds, coef = "condition_patient_vs_parent", type = "apeglm", lfcThreshold = 0.5)
+```
+
+### Results table
+
+```{r}
+formated_res <- as.data.frame(res) %>%
+  rownames_to_column("gene") %>%
+  arrange(desc(abs(log2FoldChange))) %>%
+  mutate(significative = if_else(svalue < 0.005, "yes", "no")) %>%
+  mutate(up = if_else(log2FoldChange < 0, "parent", "patient"))
+paged_table(formated_res)
+```
+
+```{r}
+table(formated_res$significative)
+```
+
+### Visualizations
+
+```{r}
+plotMA(res)
+```
+
+```{r}
+vsd <- vst(dds, blind = TRUE)
+plotPCA(vsd, intgroup = "condition")
+```
+
+
+```{r}
+select <- order(rowMeans(counts(dds, normalized = TRUE)), decreasing = TRUE)[1:5000]
+df <- as.data.frame(colData(dds))
+pheatmap(assay(vsd)[select, ],
+  cluster_rows = TRUE,
+  show_rownames = FALSE,
+  cluster_cols = TRUE,
+  annotation_col = df,
+  border_color = NA,
+  color = cividis(256),
+  scale = "row"
+)
+```
+
+---
+
+## `patient_3-3` is an outlier sample {#outlier}
+
+Load data from all samples of the Parent 3 × Patient 3 comparison:
+
+```{r message = FALSE}
+samples <- data.frame(
+  condition = c("parent", "parent", "parent", "patient", "patient", "patient"),
+  row.names = c("parent_3-1", "parent_3-2", "parent_3-3", "patient_3-1", "patient_3-2", "patient_3-3")
+)
+tx2gene <- read_tsv("transcript2gene.tsv")
+files <- file.path("Quantifications", rownames(samples), "quant.sf")
+txi <- tximport(files, type = "salmon", tx2gene = tx2gene)
+dds <- DESeqDataSetFromTximport(txi, colData = samples, design = ~condition)
+dds <- DESeq(dds)
+```
+
+Visualization of the expression data via PCA and clustering of Euclidean distances reveal that `patient_3-3` is an outlier:
+
+```{r}
+vsd <- vst(dds, blind = TRUE)
+plotPCA(vsd, intgroup = "condition") +
+  geom_label(aes(label = colnames(vsd)), alpha = 0.5, nudge_x = 5, nudge_y = 2)
+```
+
+
+```{r}
+select <- order(rowMeans(counts(dds, normalized = TRUE)), decreasing = TRUE)[1:5000]
+df <- as.data.frame(colData(dds))
+pheatmap(assay(vsd)[select, ],
+  cluster_rows = TRUE,
+  show_rownames = FALSE,
+  cluster_cols = TRUE,
+  annotation_col = df,
+  border_color = NA,
+  color = cividis(256),
+  scale = "row"
+)
+```

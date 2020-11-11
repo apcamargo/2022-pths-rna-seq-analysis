@@ -1,0 +1,49 @@
+---
+title: "TCF4 promoter usage"
+output: html_document
+---
+
+Analysis of TCF4 promoter usage in RNA-Seq libraries derived from cell cultures of a PTHS patient and its respective parent.
+
+```{r message = FALSE, warning = FALSE}
+library(tidyverse)
+library(rmarkdown)
+library(proActiv)
+library(GenomicFeatures)
+```
+
+---
+
+List of STAR junction files as input and create a vector describing experimental condition:
+
+```{r}
+files <- list.files("junction_files", full.names = TRUE)
+condition <- rep(c("parent", "patient"), each=3)
+```
+
+Create a Promoter Annotation object from a GENCODE 34 primary annotation GTF file:
+
+```{r}
+txdb <- makeTxDbFromGFF("gencode.v34.basic.annotation.gtf")
+promoterAnnotation <- preparePromoterAnnotation(txdb = txdb, species = "Homo_sapiens")
+```
+
+
+Execute the proActive analysis:
+
+```{r message = FALSE}
+result <- proActiv(files = files,
+                   promoterAnnotation = promoterAnnotation,
+                   condition = condition,
+                   genome = "hg38")
+rowData(result) %>%
+  as_tibble() %>%
+  filter(geneId == "ENSG00000196628.19") %>%
+  paged_table()
+```
+
+Visualize the results in the TCF4 locus:
+
+```{r}
+plotPromoters(result, "ENSG00000196628.19", txdb)
+```

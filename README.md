@@ -1,4 +1,4 @@
-# Analysis for "*Transcription Factor 4 loss-of-function causes severe, but reversible, deficits in neural progenitor proliferation and cortical neuron content*"
+# Analysis for "*Transcription Factor 4 loss-of-function is associated with deficits in progenitor proliferation and cortical neuron content*"
 
 ## Directories
 

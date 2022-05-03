@@ -1,5 +1,9 @@
 # Analysis for "*Transcription Factor 4 loss-of-function is associated with deficits in progenitor proliferation and cortical neuron content*"
 
+## Article
+
+Papes, F., Camargo, A.P., de Souza, J.S. _et al._ [Transcription Factor 4 loss-of-function is associated with deficits in progenitor proliferation and cortical neuron content](https://www.nature.com/articles/s41467-022-29942-w). _Nat Commun_ **13**, 2387 (2022). https://doi.org/10.1038/s41467-022-29942-w
+
 ## Directories
 
 - `ipsc-derived_cultures_differential_expression`: Differential expression analysis of RNA-Seq libraries of neural progenitor cells and neurons derived from Pitt-Hopkins Syndrome patients and their respective parents.
